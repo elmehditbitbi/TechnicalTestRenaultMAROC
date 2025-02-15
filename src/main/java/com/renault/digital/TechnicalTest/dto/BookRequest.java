@@ -7,8 +7,7 @@ import java.time.LocalDate;
 @Data
 public class BookRequest {
     private String title;
-    private Long authorId; // Identifiant de l'auteur existant
+    private Long authorId;
     private LocalDate publicationDate;
     private String type;
-    // Vous pouvez ajouter le champ ISBN si besoin
 }

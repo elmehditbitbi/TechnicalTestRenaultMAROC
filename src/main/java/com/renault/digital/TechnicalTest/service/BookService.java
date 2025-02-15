@@ -8,8 +8,8 @@ import com.renault.digital.TechnicalTest.model.Author;
 import com.renault.digital.TechnicalTest.model.Book;
 import com.renault.digital.TechnicalTest.repository.AuthorRepository;
 import com.renault.digital.TechnicalTest.repository.BookRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class BookService {
     @Autowired
     private BookRepository bookRepository;
@@ -26,107 +27,108 @@ public class BookService {
     @Autowired
     private AuthorRepository authorRepository;
 
-    /**
-     * 1. Ajouter un nouveau livre.
-     */
     public Book addBook(BookRequest bookRequest) {
+        log.info("Start service add new book by author id {}", bookRequest.getAuthorId());
         Author author = authorRepository.findById(bookRequest.getAuthorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Auteur non trouvé avec l'id " + bookRequest.getAuthorId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Author not found " + bookRequest.getAuthorId()));
         Book book = new Book();
         book.setTitle(bookRequest.getTitle());
         book.setPublicationDate(bookRequest.getPublicationDate());
         book.setType(bookRequest.getType());
-        // Vous pouvez définir l'ISBN ici si inclus dans le DTO
         book.setAuthor(author);
+        log.info("End service add new book by author id {}", bookRequest.getAuthorId());
         return bookRepository.save(book);
     }
 
-    /**
-     * 2. Mettre à jour un livre existant.
-     */
     public Book updateBook(Long id, BookRequest bookRequest) {
+        log.info("Start service update an existing book by id {}", id);
         Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Livre non trouvé avec l'id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with the id " + id));
         book.setTitle(bookRequest.getTitle());
         book.setPublicationDate(bookRequest.getPublicationDate());
         book.setType(bookRequest.getType());
         if(bookRequest.getAuthorId() != null) {
             Author author = authorRepository.findById(bookRequest.getAuthorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Auteur non trouvé avec l'id " + bookRequest.getAuthorId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Author not found " + bookRequest.getAuthorId()));
             book.setAuthor(author);
         }
+        log.info("End service update an existing book by id {}", id);
         return bookRepository.save(book);
     }
 
-    /**
-     * 3. Suppression d'un livre à partir de son id.
-     */
     public void deleteBook(Long id) {
+        log.info("Start service delete a book by id {}", id);
         if(!bookRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Livre non trouvé avec l'id " + id);
+            throw new ResourceNotFoundException("Book not found with the id " + id);
         }
+        log.info("End service delete a book by id {}", id);
         bookRepository.deleteById(id);
     }
 
-    /**
-     * 4. Obtenir les informations d'un livre à partir de son id.
-     */
     public Book getBookById(Long id) {
         return bookRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Livre non trouvé avec l'id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with the id " + id));
     }
 
-    /**
-     * 5. Obtenir les informations d'un livre à partir de son nom (ici le titre).
-     */
     public Book getBookByTitle(String title) {
         return bookRepository.findByTitle(title)
-                .orElseThrow(() -> new ResourceNotFoundException("Livre non trouvé avec le titre " + title));
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with the title " + title));
     }
 
-    /**
-     * 6. Calculer une note sur 10 d’un livre en fonction de sa date de publication
-     *    (les livres récents sont mieux notés) et du nombre de followers de l’auteur.
-     */
     public double rateBook(Long id) {
+        log.info("Start Service rate a book with id {}", id);
+        // Retrieve the book using its ID.
         Book book = getBookById(id);
+
+        // Get the publication date of the book.
         LocalDate publicationDate = book.getPublicationDate();
+
+        // Calculate the number of years between the publication date and now.
         int yearsDiff = Period.between(publicationDate, LocalDate.now()).getYears();
 
-        // Score de récence : exponentiel pour mieux pénaliser les vieux livres
-        double recencyScore = 10 * Math.exp(-0.1 * yearsDiff); // Décroissance rapide mais jamais 0
+        // Calculate the recency score:
+        // - Start with a base value of 10.
+        // - Apply an exponential decay (using Math.exp) to penalize older books.
+        //   This means that the score decreases quickly for older books,
+        //   but it will never reach 0.
+        double recencyScore = 10 * Math.exp(-0.1 * yearsDiff);
 
-        // Bonus d'auteur : Plus d’influence si l’auteur est populaire
+        // Calculate the author bonus:
+        // - Retrieve the number of followers for the author.
+        // - If the number of followers is null, treat it as 0.
+        // - Apply a logarithmic function to provide a gradual bonus based on popularity.
+        // - Limit the bonus to a maximum of 2.0 to avoid overly high scores.
         int followers = book.getAuthor().getFollowersNumber() != null ? book.getAuthor().getFollowersNumber() : 0;
-        double authorBonus = Math.min(Math.log(1 + followers / 500.0), 2.0); // Plus doux et progressif
+        double authorBonus = Math.min(Math.log(1 + followers / 500.0), 2.0);
 
-        // Score final plafonné à 10
+        // Combine the recency score and the author bonus.
+        // Cap the total score at 10 to ensure it doesn't exceed the maximum allowed rating.
         double totalScore = Math.min(recencyScore + authorBonus, 10.0);
 
+        log.info("End Service rate a book with id {}", id);
+        // Round the final score to two decimal places before returning it.
         return Math.round(totalScore * 100.0) / 100.0;
     }
 
-    /**
-     * 7. A partir d'une liste d’IDs de livres, retourner la liste des auteurs sans doublon.
-     */
     public List<Author> getAuthorsByBookIds(List<Long> bookIds) {
+        log.info("Start Service get authors by book IDs {}", bookIds);
         List<Book> books = bookRepository.findAllById(bookIds);
         Set<Author> authorsSet = books.stream()
                 .map(Book::getAuthor)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+        log.info("End Service get authors by book IDs {}", bookIds);
         return new ArrayList<>(authorsSet);
     }
 
-    /**
-     * 8. Requête externe : trouver un livre à partir de son code ISBN en appelant une autre API.
-     */
     public ExternalBooksResponse getBookByIsbnExternal(String isbn) {
+        log.info("Start Service Get book by ISBN externally {}", isbn);
         RestTemplate restTemplate = new RestTemplate();
         ExternalBooksResponse externalBooksResponse = new ExternalBooksResponse();
         String url = "https://openlibrary.org/api/books?bibkeys=ISBN:" + isbn + "&format=json";
         Map<String, BookExternalDto> response = restTemplate.getForObject(url, Map.class);
         externalBooksResponse.setBooks(response);
+        log.info("End Service Get book by ISBN externally {}", isbn);
         return externalBooksResponse;
     }
 }
