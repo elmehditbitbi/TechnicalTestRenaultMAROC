@@ -26,6 +26,7 @@ public class BookService {
     private final AuthorRepository authorRepository;
     private final Mapper mapper;
 
+
     public BookDto addBook(BookRequest bookRequest) {
         log.info("Start service add new book by author id {}", bookRequest.getAuthorId());
         Author author = authorRepository.findById(bookRequest.getAuthorId())
