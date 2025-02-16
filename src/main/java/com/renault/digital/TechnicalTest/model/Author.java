@@ -10,7 +10,6 @@ import java.util.List;
 
 @Data
 @Entity
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Author {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +20,5 @@ public class Author {
     private Integer followersNumber;
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL)
-    @JsonIgnore
     private List<Book> books = new ArrayList<>();
 }

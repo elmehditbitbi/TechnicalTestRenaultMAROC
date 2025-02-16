@@ -1,15 +1,11 @@
 package com.renault.digital.TechnicalTest.controller;
 
-import com.renault.digital.TechnicalTest.dto.BookRequest;
-import com.renault.digital.TechnicalTest.dto.BooksDto;
-import com.renault.digital.TechnicalTest.dto.ExternalBooksResponse;
-import com.renault.digital.TechnicalTest.model.Author;
-import com.renault.digital.TechnicalTest.model.Book;
+import com.renault.digital.TechnicalTest.dto.*;
 import com.renault.digital.TechnicalTest.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +16,10 @@ import java.util.List;
 @RequestMapping("/books")
 @Tag(name = "Books", description = "APIs for managing books")
 @Slf4j
+@AllArgsConstructor
 public class BookController {
-    @Autowired
-    private BookService bookService;
+
+    private final BookService bookService;
 
     /**
      * Add a new book.
@@ -32,9 +29,9 @@ public class BookController {
      */
     @Operation(summary = "Add a new book", description = "Creates a new book and returns the created book.")
     @PostMapping
-    public ResponseEntity<Book> addBook(@RequestBody BookRequest bookRequest) {
+    public ResponseEntity<BookDto> addBook(@RequestBody BookRequest bookRequest) {
         log.info("Start resource add new book by author id {}", bookRequest.getAuthorId());
-        Book savedBook = bookService.addBook(bookRequest);
+        BookDto savedBook = bookService.addBook(bookRequest);
         log.info("End resource add new book by author id {}", bookRequest.getAuthorId());
         return new ResponseEntity<>(savedBook, HttpStatus.CREATED);
     }
@@ -48,9 +45,9 @@ public class BookController {
      */
     @Operation(summary = "Update an existing book", description = "Updates an existing book by its ID and returns the updated book.")
     @PutMapping("/{id}")
-    public ResponseEntity<Book> updateBook(@PathVariable Long id, @RequestBody BookRequest bookRequest) {
+    public ResponseEntity<BookDto> updateBook(@PathVariable Long id, @RequestBody BookRequest bookRequest) {
         log.info("Start resource update an existing book by id {}", id);
-        Book updatedBook = bookService.updateBook(id, bookRequest);
+        BookDto updatedBook = bookService.updateBook(id, bookRequest);
         log.info("End resource update an existing book by id {}", id);
         return ResponseEntity.ok(updatedBook);
     }
@@ -78,9 +75,9 @@ public class BookController {
      */
     @Operation(summary = "Get a book by ID", description = "Retrieves a book by its ID.")
     @GetMapping("/{id}")
-    public ResponseEntity<Book> getBookById(@PathVariable Long id) {
+    public ResponseEntity<BookDto> getBookById(@PathVariable Long id) {
         log.info("Start resource get a book by ID {}", id);
-        Book book = bookService.getBookById(id);
+        BookDto book = bookService.getBookById(id);
         log.info("End resource get a book by ID {}", id);
         return ResponseEntity.ok(book);
     }
@@ -93,9 +90,9 @@ public class BookController {
      */
     @Operation(summary = "Get a book by title", description = "Retrieves a book by its title.")
     @GetMapping("/search")
-    public ResponseEntity<Book> getBookByTitle(@RequestParam String title) {
+    public ResponseEntity<BookDto> getBookByTitle(@RequestParam String title) {
         log.info("Start Resource get a book by title {}", title);
-        Book book = bookService.getBookByTitle(title);
+        BookDto book = bookService.getBookByTitle(title);
         log.info("End Resource get a book by title {}", title);
         return ResponseEntity.ok(book);
     }
@@ -123,9 +120,9 @@ public class BookController {
      */
     @Operation(summary = "Get authors by book IDs", description = "Retrieves authors associated with a list of books (without duplicates).")
     @GetMapping("/authors")
-    public ResponseEntity<List<Author>> getAuthorsByBookIds(@RequestBody BooksDto booksDto) {
+    public ResponseEntity<List<AuthorDTO>> getAuthorsByBookIds(@RequestBody BooksDto booksDto) {
         log.info("Start Resource get authors by book IDs {}", booksDto.getBookIds());
-        List<Author> authors = bookService.getAuthorsByBookIds(booksDto.getBookIds());
+        List<AuthorDTO> authors = bookService.getAuthorsByBookIds(booksDto.getBookIds());
         log.info("End Resource get authors by book IDs {}", booksDto.getBookIds());
         return ResponseEntity.ok(authors);
     }
